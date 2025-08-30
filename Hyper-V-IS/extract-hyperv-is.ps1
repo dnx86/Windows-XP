@@ -1,5 +1,5 @@
 # Quick and dirty script to extract Hyper-V Integration Services x86 files from KB5063950.
-# It assumes the MSU file is in the same directory.
+# It assumes the MSU file is in the same location as this script.
 # Tested in Windows Sandbox.
 
 $msuName = "windows8.1-kb5063950-x64_d743be306a7c9840e7c41cf2355564e3fea6d7e7.msu"
@@ -8,13 +8,10 @@ if ( !(Test-Path -Path "$PSScriptRoot\$msuName") ) {
     Write-Host "The MSU file msut be in the same location as this script!"
     Exit
 }
-# expand -i "$PSScriptRoot\$msuName" -F:$cabName $PSScriptRoot
+
 Start-Process -FilePath "expand.exe" -Wait -ArgumentList "-i `"$PSScriptRoot\$msuName`" -F:$cabName $PSScriptRoot" -NoNewWindow
-# expand -i "$PSScriptRoot\$cabName" -F:windows5.x-hypervintegrationservices-x86* $PSScriptRoot
 Start-Process -FilePath "expand.exe" -Wait -ArgumentList "-i `"$PSScriptRoot\$cabName`" -F:windows5.x-hypervintegrationservices-x86* $PSScriptRoot" -NoNewWindow
-# expand -i "$PSScriptRoot\$cabName" -F:windows6*-hypervintegrationservices-x86* $PSScriptRoot
 Start-Process -FilePath "expand.exe" -Wait -ArgumentList "-i `"$PSScriptRoot\$cabName`" -F:windows6*-hypervintegrationservices-x86* $PSScriptRoot" -NoNewWindow
-# expand "$PSScriptRoot\$cabName" -F:setup.exe $PSScriptRoot
 Start-Process -FilePath "expand.exe" -Wait -ArgumentList "`"$PSScriptRoot\$cabName`" -F:setup.exe $PSScriptRoot" -NoNewWindow
 Copy-Item -Path "$PSScriptRoot\x86_microsoft-hyper-v-guest-installer_31bf3856ad364e35_6.3.9600.19456_none_0666f39c3d42b614\setup.exe" -Destination $PSScriptRoot
 
@@ -58,4 +55,5 @@ Remove-Item -Path "$PSScriptRoot\x86_microsoft*" -Recurse -Force
 
 Write-Host "Uninstalling Windows Driver Kit 8 redistributable components..."
 Start-Process -FilePath "msiexec.exe" -Wait -ArgumentList "/x `"$PSScriptRoot\$wdfcoinstallerName`" /quiet" -NoNewWindow
-# Remove-Item -Path "$PSScriptRoot\$wdfcoinstallerName" -Force
+
+Remove-Item -Path "$PSScriptRoot\$wdfcoinstallerName" -Force
