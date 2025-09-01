@@ -31,9 +31,26 @@ Because I am bored.
     ```
 
 ## Details/Discussion
-*Add later*
+I used [^2] and [^3] as guides.
+
+1. Create a 1 to 2 GB VHDX.
+    - Initialize it with an MBR partition style.
+    - Create partition 1, mark as active, and format it as FAT.
+    - Use `bootsect /nt52` [^4].
+2. Mount the Windows XP ISO and copy its contents to partition 1.
+3. Copy `SETUPLDR.BIN, NTDETECT.COM, and TXTSETUP.SIF` from the ISO's i386 folder to partition 1.
+    - Rename `SETUPLDR.BIN` to `ntldr`.
+4. Edit TXTSETUP.SIF and the two lines below to the `[setupData]` section.
+    ```
+    BootPath = "\I386\"
+    SetupSourceDevice = "\Device\Harddisk0\Partition1"
+    ```
+5. ***Optional*** Create partition 2, format it as FAT32 or NTFS, and copy files that you want to transfer or install (e.g. *Hyper-V Integration Services setup files*).
+
+**More to add**
 
 ## Links/References
 [^1]: [System requirements for Hyper-V on Windows and Windows Server](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/host-hardware-requirements)
 [^2]: [Install XP from USB without extra tools](https://msfn.org/board/topic/151992-install-xp-from-usb-without-extra-tools/)
 [^3]: [Completing a Postponed Project](https://www.losingoneself.com/blog/completing-a-postponed-project/)
+[^4]: [Bootsect Command-Line Options](https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/bootsect-command-line-options?view=windows-11)
