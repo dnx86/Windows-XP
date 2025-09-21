@@ -1,20 +1,27 @@
-# DRAFT VERSION!
-# Generates a winpe.wim file with drivers, optional components, and updates.
 # Use for copying the Windows XP I386 folder onto a HDD/SSD with a 64-bit CPU.
+# Windows ADK 10.1.26100.2454 (December 2024)
+# Windows PE add-on for Windows ADK 10.1.26100.2454 (December 2024)
+# Use Windows PE add-on for the ADK, version 2004 for 32-bit Windows PE.
 # https://learn.microsoft.com/en-us/windows/deployment/customize-boot-image?tabs=powershell
 # https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/winpe-mount-and-customize?view=windows-11
+
 #Requires -RunAsAdministrator
 #Requires -Version 5.1
 
 $StartDateTime = Get-Date
 Write-Host "Script started at $StartDateTime" -ForegroundColor Red
 
-# Variables
 # Windows XP ISO filename
 $pathXPiso = "$PSScriptRoot\en_windows_xp_professional_with_service_pack_3_x86_cd_vl_x14-73974.iso"
 
+# Dell Precision M4700 Windows XP drivers pack
+# See link below for list of contents:
+# https://dl.dell.com/FOLDER02141122M/1/M4700-xp-A07-YH4YP.html
+$pathDelldrivers = "$PSScriptRoot\M4700-xp-A07-YH4YP.CAB"
+
 # List of cumulative updates in the CUs folder. KB names are in double quotes separated by commas.
-$listCUs = @()
+# No need to include the SSU in this list.
+$listCUs = @("KB5065426")
 
 # List of optional components that will be added in the order listed.
 $listOCs = @("WinPE-WMI", "WinPE-NetFX", "WinPE-Scripting", "WinPE-PowerShell", "WinPE-DismCmdlets", "WinPE-StorageWMI", "WinPE-SecureStartup", "WinPE-FMAPI", "WinPE-SecureBootCmdlets", "WinPE-EnhancedStorage")
@@ -31,21 +38,21 @@ $DandISetEnvPath = [System.Environment]::ExpandEnvironmentVariables("%ProgramFil
 $pathOC = [System.Environment]::ExpandEnvironmentVariables("%ProgramFiles(x86)%\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment\amd64\WinPE_OCs")
 $pathOCen = [System.Environment]::ExpandEnvironmentVariables("%ProgramFiles(x86)%\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment\amd64\WinPE_OCs\en-us")
 
-# Paths relative to location of script
+# Paths relative to script location
 $WinPEPath = "$PSScriptRoot\WinPE_amd64"
 $pathMount = "$WinPEPath\mount"
 $pathWimFile = "$WinPEPath\media\sources\boot.wim"
 $pathCU = "$PSScriptRoot\CUs"
 
 
-# No point of continuing if there's no ISO.
+# No point of continuing if the ISO is not present.
 if ( !(Test-Path -Path $pathXPiso) ) {
     Write-Host "Windows XP ISO file not present! Exiting!" -ForegroundColor Yellow
     Exit
 }
 
 # Check if Windows ADK and PE add-on are installed
-Write-Host "Checking if Windows ADK is installed..."
+Write-Host "Checking if Windows ADK is installed..." -ForegroundColor DarkGreen
 $ADKInstalled = Test-Path -Path "$ADKInstallLocation\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg"
 if ($ADKInstalled) {
     Write-Host "  -- An installation of Windows ADK was found on device."
@@ -55,7 +62,7 @@ else {
     Exit
 }
 
-Write-Host "Checking if Windows ADK WinPE add-on is installed..."
+Write-Host "Checking if Windows ADK WinPE add-on is installed..." -ForegroundColor DarkGreen
 $ADKWinPEInstalled = Test-Path -Path $ADKWinPELocation
 if ($ADKWinPEInstalled) {
     Write-Host "  -- An installation of Windows ADK WinPE add-on was found on this device."
@@ -67,12 +74,12 @@ else {
 
 
 # Delete existing WinPE folder and create a new one.
-Write-Host "[+] Creating a working copy of Windows PE"
+Write-Host "[+] Creating a working copy of Windows PE" -ForegroundColor DarkGreen
 if (Test-Path -Path "$WinPEPath") {
-    Write-Host "Deleting the existing WinPE folder..." -ForegroundColor DarkGreen
+    Write-Host "Deleting the existing WinPE folder..."
     Remove-Item -Path "$WinPEPath" -Recurse -Force
 }
-Write-Host "Creating new WinPE folder..."
+Write-Host "Creating new WinPE folder..." -ForegroundColor DarkGreen
 cmd.exe /c """$DandISetEnvPath"" && copype amd64 $WinPEPath"
 
 # Mount boot.wim to mount folder.
@@ -85,12 +92,12 @@ Mount-WindowsImage -Path "$pathMount" -ImagePath "$pathWimFile" -Index 1 -Verbos
 # For Windows 11: If you're launching Windows Setup from WinPE, make sure your WinPE image includes the WinPE-WMI and WinPE-SecureStartup optional components.
 # https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/winpe-intro?view=windows-11#notes-on-running-windows-setup-in-windows-pe
 foreach ($oc in $listOCs) {
-    Write-Host "Adding $oc.cab"
-    Add-WindowsPackage -Path "$pathMount" -Verbose -PackagePath "$pathOC\$oc.cab"
+    Write-Host "Adding $oc.cab" -ForegroundColor Cyan
+    Add-WindowsPackage -Path "$pathMount" -PackagePath "$pathOC\$oc.cab"
 
     if (Test-Path -Path "$pathOCen\$oc`_en-us.cab") {
-        Write-Host "Adding $oc`_en-us.cab"
-        Add-WindowsPackage -Path "$pathMount" -Verbose -PackagePath "$pathOCen\$oc`_en-us.cab"
+        Write-Host "Adding $oc`_en-us.cab" -ForegroundColor Cyan
+        Add-WindowsPackage -Path "$pathMount" -PackagePath "$pathOCen\$oc`_en-us.cab"
     }
     
 }
@@ -101,14 +108,19 @@ $pathStartnetcmd = Join-Path -Path $pathMount -ChildPath "windows\system32\start
 Write-Host "Setting the power scheme to high-performance."
 "powercfg /s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" | Out-File -FilePath "$pathStartnetcmd" -Append -Encoding ascii
 
-# Add cumulative update (CU) to boot image
+# Add cumulative update (CU) to boot image. CLOSE WINDOWS SANDBOX!
+# Error message if Windows Sandbox is running:
+# WARNING: Failed to add package
+# WARNING: Add-WindowsPackage failed. Error code = 0x80070091
+# Add-WindowsPackage : An error occurred applying the Unattend.xml file from the .msu package.
+#
 # Windows 11 24H2 updates at https://support.microsoft.com/en-us/help/5045988
 # https://catalog.update.microsoft.com/
 # https://learn.microsoft.com/en-us/windows/deployment/update/catalog-checkpoint-cumulative-updates
 # https://learn.microsoft.com/en-us/windows/deployment/update/media-dynamic-update
 # Add-WindowsPackage -PackagePath "<Path_to_CU_MSU_update>\<CU>.msu" -Path "<Mount_folder_path>" -Verbose
 if ( (Test-Path -Path "$pathCU") -and ((Get-ChildItem -Path "$pathCU").Count -ne 0) -and ($listCUs.Count -gt 0) ) {
-    Write-Host "Adding cumulative update(s)..."
+    Write-Host "Adding cumulative update(s)..." -ForegroundColor DarkGreen
     foreach ($cu in $listCUs) {
         if (Test-Path -Path "$pathCU\*$cu*") {
             Write-Host "Adding $cu" -ForegroundColor DarkCyan
@@ -128,13 +140,13 @@ else {
 }
 
 # Perform component cleanup
-Write-Host "Performing component cleanup..."
+Write-Host "Performing component cleanup..." -ForegroundColor DarkGreen
 Start-Process "$pathADKDism" -ArgumentList " /Image:${pathMount} /Cleanup-image /StartComponentCleanup /Resetbase" -Wait -LoadUserProfile -NoNewWindow
 
-# Mount Windows XP ISO.
+# Mount the Windows XP ISO.
 Write-Host "Mounting the ISO file." -ForegroundColor DarkGreen
 $isoMountPointDriveLetter = (Mount-DiskImage -StorageType ISO -ImagePath $pathXPiso -ErrorAction Stop -PassThru | Get-Volume).DriveLetter
-$pathISOi386 = $isoMountPointDriveLetter + ":\" + "I386"
+$pathISOi386 = $isoMountPointDriveLetter + ":" + "\I386"
 
 # Copy I386 folder and its contents to the WinPE mount folder.
 Write-Host "Copying $pathISOi386 to $pathMount" -ForegroundColor DarkGreen
@@ -145,32 +157,60 @@ Copy-Item -Path "$pathISOi386" -Destination "$pathMount\I386" -Recurse -Force
  Dismount-DiskImage -ImagePath $pathXPiso -ErrorAction Stop | Out-Null
 
 
-# Copy $OEM$ folder and contents to mount if it exists.
 # Drivers MUST BE IN SUBFOLDERS UNDER $OEM$\$1\DRIVERS
+# https://msfn.org/board/topic/19792-textmode-massstoragedrivers-method/
 # RAID/SATA DRIVERS MUST BE UNDER:
 #   $OEM$
 #   $OEM$\TEXTMODE
-#   and in subfolder of $OEM$\$1\DRIVERS
+#   I386\$OEM$
+#   I386\$OEM$\TEXTMODE
 $oemDriverspath = ""
-if ( Test-Path -Path "$PSScriptRoot\`$OEM$" ) {
-    Write-Host "Copying OEM folder to $pathMount"
-    Copy-Item -Path "$PSScriptRoot\`$OEM$" -Destination "$pathMount\`$OEM$" -Recurse -Force
-    Copy-Item -Path "$PSScriptRoot\`$OEM$" -Destination "$pathMount\I386\`$OEM$" -Recurse -Force
+if (Test-Path -Path $pathDelldrivers) {
+    # Check Authenticode signature
+    if ( (Get-AuthenticodeSignature -FilePath $pathDelldrivers).Status -ne "Valid" ) {
+        Write-Host "Invalid signature! Skipping extraction!" -ForegroundColor Yellow
+        Break
+    }
+    else {
+        # Delete M4700 folder and it's contents if it exists
+        if (Test-Path -Path "$PSScriptRoot\M4700") {
+            Remove-Item -Path "$PSScriptRoot\M4700" -Recurse -Force
+        }
+        # Extract the drivers
+        Start-Process "expand.exe" -ArgumentList "$pathDelldrivers -F:* $PSScriptRoot" -Wait -LoadUserProfile
 
-    if ( (Get-ChildItem -Directory -Path '$OEM$\$1\DRIVERS').Count -gt 0 ) {
-        $tempObj = Get-ChildItem -Directory -Path '$OEM$\$1\DRIVERS'
-        $oemDriverspath = "OEMPnpDriversPath=`""
+        $tempPath = "$pathMount" + '\$OEM$\$1\DRIVERS'
+        New-Item -Path $tempPath -ItemType Directory
+        Copy-Item -Path "$PSScriptRoot\M4700\xp\x86\*" -Destination $tempPath -Recurse -Force
+
+        $pathStoragedrivers = "$PSScriptRoot\M4700\xp\x86\storage\404F9_A00-00\Production\XP-x86"
+        Copy-Item -Path "$pathStoragedrivers\*" -Destination "$pathMount\`$OEM$" -Recurse -Force
+        Copy-Item -Path "$pathStoragedrivers" -Destination "$pathMount\`$OEM$\TEXTMODE" -Recurse -Force
+        Copy-Item -Path "$pathStoragedrivers" -Destination "$pathMount\I386\`$OEM$" -Recurse -Force
+        Copy-Item -Path "$pathStoragedrivers" -Destination "$pathMount\I386\`$OEM$\TEXTMODE" -Recurse -Force
+
+        Set-Location "$pathMount\`$OEM$\`$1"
+        $tempObj = (Get-ChildItem * -Recurse -Include "*.inf") | Select-Object Directory -Unique
+        $oemDriverspath = "OemPnPDriversPath=`""
         foreach ($the_folder in $tempObj){
-            # Write-Host $the_folder.Parent.Name
-            $oemDriverspath += "$($the_folder.Parent.Name)\$($the_folder.Name);"
+            if ($null -ne $the_folder.Directory) {
+                # Write-Host ($the_folder.Directory | Resolve-Path -Relative)
+                $temp = ($the_folder.Directory | Resolve-Path -Relative)
+                $temp = $temp.Substring(2)
+                $oemDriverspath += "$temp;"
+            } 
         }
         $oemDriverspath =  $oemDriverspath.Remove($oemDriverspath.Length - 1, 1)  # Removes the last ;
         $oemDriverspath = $oemDriverspath + '"'
+        Set-Location $PSScriptRoot
+
+        Remove-Item -Path "$PSScriptRoot\M4700" -Recurse -Force
     }
 }
 
+
 # Copy TXTSETUP.SIF to the WinPE mount folder.
-# Edit \txtsetup.sif to add two lines in [setupData] section:
+# Add two lines under [SetupData] section:
 # BootPath = "\I386\"
 # SetupSourceDevice = "\Device\Harddisk0\Partition1"
 $pathTxtsetup = "$pathMount\I386\TXTSETUP.SIF"
@@ -186,13 +226,12 @@ $pathTxtsetup = "$pathMount\TXTSETUP.SIF"
 if ( Select-String -Path $pathTxtsetup -Pattern '\[SetupData\]' -Quiet ) {
     $tempObject = Select-String -Path $pathTxtsetup -Pattern '\[SetupData\]'
     if ( !($tempObject -is [array]) ) {
-        Write-Host "Adding BootPath and SetupSourceDevice..."
+        Write-Host "Adding BootPath and SetupSourceDevice to TXTSETUP.SIF" -ForegroundColor DarkGreen
         Set-ItemProperty -Path "$pathTxtsetup" -Name IsReadOnly -Value $false
         $fileContent = Get-Content -Path "$pathTxtsetup"
         $fileContent[$tempObject.LineNumber - 1] += $tempText
         $fileContent | Set-Content -Path "$pathTxtsetup"
         Set-ItemProperty -Path "$pathTxtsetup" -Name IsReadOnly -Value $true
-
     }
     else {
         Write-Host "Multiple [SetupData] matches found!" -ForegroundColor Yellow
@@ -200,14 +239,9 @@ if ( Select-String -Path $pathTxtsetup -Pattern '\[SetupData\]' -Quiet ) {
     }
 }
 
-# REMOVE COMMENTED OUT CODE BELOW LATER!
-# Copy unattend.txt, rename it to winnt.sif to the WinPE mount/I386 folder.
-# Write-Host "Copying $PSScriptRoot\unattend.txt to $pathMount" -ForegroundColor DarkGreen
-# Copy-Item -Path "$PSScriptRoot\unattend.txt" -Destination "$pathMount\I386\winnt.sif"
 
-# Create WINNT.SIF in I386 for unattended installation
+# Create winnt.sif in I386 for unattended installation
 $winntSIF = @"
-;SetupMgrTag
 ; https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2003/cc757642(v=ws.10)
 [Data]
 ;Installs Windows to the first available partition that has adequate space for a Windows installation and does not already contain an installed version of Windows.
@@ -253,9 +287,11 @@ $oemDriverspath
 UnattendSwitch = Yes
 
 [GuiUnattended]
-;Enables Setup to install encrypted passwords for the Administrator account.
-;EncryptedAdminPassword = Yes | No
-EncryptedAdminPassword = NO
+;Set AdminPassword to something or setup will stop the process and ask for one.
+AdminPassword = *
+
+AutoLogon = Yes
+AutoLogonCount = 1
 
 ;Enables unattended installation to skip the Regional and Language Options page in the final (GUI-mode) stage of Setup.
 ;OEMSkipRegional = 0 | 1
@@ -271,13 +307,13 @@ OemSkipWelcome = 1
 ;https://learn.microsoft.com/en-us/previous-versions/orphan-topics/ws.10/cc755725(v=ws.10)?redirectedfrom=MSDN#timezone
 ;TimeZone = index
 ;4 = Pacific Standard Time
-TimeZone=4
+TimeZone = 4
 
 [UserData]
 ProductKey="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
-FullName="Home"
-OrgName="Home"
-ComputerName=*
+FullName = "Home"
+OrgName = "Home"
+ComputerName = *
 
 [RegionalSettings]
 LanguageGroup=1
@@ -289,7 +325,7 @@ InputLocale=0409:00000409
 JoinWorkgroup=WORKGROUP
 
 [Networking]
-InstallDefaultComponents=Yes
+InstallDefaultComponents = Yes
 
 
 ;The [OEMBootFiles] section contains entries for specifying OEM-supplied boot files. This section is valid only if you use
@@ -299,14 +335,15 @@ InstallDefaultComponents=Yes
 ;
 ; COMMENT OUT ALL THE LINES BELOW IF `$OEM$ DOESN'T EXISTS OR IF YOU ONLY PLAN ON USING ATA!
 [OEMBootFiles]
-TXTSETUP.OEM
+iaahci.cat
+iaAHCI.inf
+iastor.cat
 iaStor.inf
 iaStor.sys
-iaStor.cat
-iaAHCI.inf
-iaAHCI.cat
+TXTSETUP.OEM
 
 [MassStorageDrivers]
+; iaAHCI.inf
 "Intel(R) ICH7R/DH SATA AHCI Controller" = "OEM"
 "Intel(R) ICH7M/MDH SATA AHCI Controller" = "OEM"
 "Intel(R) ICH9M-E/M SATA AHCI Controller" = "OEM"
@@ -319,11 +356,14 @@ iaAHCI.cat
 "Intel(R) Mobile Express Chipset SATA AHCI Controller" = "OEM"
 "Intel(R) 7 Series/C216 Chipset Family SATA AHCI Controller" = "OEM"
 "Intel(R) 7 Series Chipset Family SATA AHCI Controller" = "OEM"
-"IDE CD-ROM (ATAPI 1.2)/PCI IDE Controller" = "RETAIL"
 
+; iaStor.inf
+"Intel(R) ICH7R/DH SATA RAID Controller" = "OEM"
+"Intel(R) ICH7MDH SATA RAID Controller" = "OEM"
+"Intel(R) Desktop/Workstation/Server Express Chipset SATA RAID Controller" = "OEM"
+"Intel(R) Mobile Express Chipset SATA RAID Controller" = "OEM"
 "@
-Write-Host $oemDriverspath # Remove this line later!
-Write-Host "Creating $pathMount\I386\winnt.sif"
+Write-Host "Creating $pathMount\I386\winnt.sif" -ForegroundColor DarkGreen
 Out-File -Encoding ascii -InputObject $winntSIF -FilePath "$pathMount\I386\winnt.sif"
 
 
@@ -345,35 +385,45 @@ exit
 Write-Host "Creating 1-partition-disk-0.txt in $pathMount" -ForegroundColor DarkGreen
 Out-File -Encoding ascii -InputObject $theScript -FilePath "$pathMount\1-partition-disk-0.txt"
 
-# Create batch file to copy files to setup partition and run bootsect.
+# Create batch file that partitions the disk, copies the files, and runs bootsect.
 $theScript = @"
+rem THIS SCRIPT WILL DELETE ALL PARTITIONS AND QUICK FORMAT THE HDD/SSD!
+rem Press Ctrl+C to abort!
+
+pause
+
+rem Running diskpart...
+diskpart /s X:\1-partition-disk-0.txt
+
+rem Copying files...
+
 robocopy "X:\I386" "Z:\I386" /e
 robocopy "X:\`$OEM$" "Z:\`$OEM$" /e
-
-bootsect /nt52 Z: /mbr /force
 
 copy "X:\I386\NTDETECT.COM" "Z:\NTDETECT.COM"
 copy "X:\I386\SETUPLDR.BIN" "Z:\NTLDR"
 copy "X:\TXTSETUP.SIF" "Z:\TXTSETUP.SIF"
-"@
-Write-Host "Creating 2-copy-files.bat in $pathMount" -ForegroundColor DarkGreen
-Out-File -Encoding ascii -InputObject $theScript -FilePath "$pathMount\2-copy-files.bat"
 
-# Create batch file that partitions the disk and copies the files
-$theScript = @"
-echo Running diskpart...
-diskpart /s X:\1-partition-disk-0.txt
+bootsect /nt52 Z: /mbr /force
 
-pause
+wpeutil reboot
 
-echo Copying files...
-X:\2-copy-files.bat
 "@
 Write-Host "Creating prep-install.bat in $pathMount" -ForegroundColor DarkGreen
 Out-File -Encoding ascii -InputObject $theScript -FilePath "$pathMount\prep-install.bat"
+# Add entry in startnet.cmd so the script will automatically run.
+"X:\prep-install.bat" | Out-File -FilePath "$pathStartnetcmd" -Append -Encoding ascii
 
 # Unmount boot image and save changes
 Write-Host "Unmounting and saving changes to boot.wim..." -ForegroundColor DarkGreen
 Dismount-WindowsImage -Path "$pathMount" -Save -Verbose
 
 Write-Host "Script completed at $(Get-Date) and took $( (New-TimeSpan -Start $StartDateTime).Hours ) hours, $( (New-TimeSpan -Start $StartDateTime).Minutes ) minutes, $( (New-TimeSpan -Start $StartDateTime).Seconds ) seconds" -ForegroundColor Red
+
+# Useful commands to run.
+Write-Host "Run:"
+Write-Host "makewinpemedia /ufd `"$WinPEPath`" <USB Flash Drive Letter>:" -ForegroundColor DarkCyan
+Write-Host "Mount/Dismount the Windows PE boot.wim:"
+Write-Host "Mount-WindowsImage -ImagePath `"$pathWimFile`" -Path `"$pathMount`" -Index 1" -ForegroundColor DarkCyan
+Write-Host "Dismount-WindowsImage -Path `"$pathMount`" -Discard" -ForegroundColor DarkCyan
+Write-Host "Dismount-WindowsImage -Path `"$pathMount`" -Save" -ForegroundColor DarkCyan
