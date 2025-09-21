@@ -3,7 +3,7 @@
 ## Specifications
 + Intel Core **i7-3630QM**
 + 16 GB DDR3 RAM
-+ 256 GB SSD
++ ~256~ 500 GB Samsung 870 EVO SSD
 + Intel HD Graphics 4000
 + Nvidia Quadro K1000M
 + Intel 82579LM gigabit ethernet
