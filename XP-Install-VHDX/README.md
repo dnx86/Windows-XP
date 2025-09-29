@@ -22,7 +22,7 @@ Because I am bored.
 ## Requirements
 + Windows 11 or Windows Server 2025 with Hyper-V installed (this assumes your hardware meets the requirements[^1]).
 + Do yourself a favor and get `en_windows_xp_professional_with_service_pack_3_x86_cd_vl_x14-73974.iso` to skip activation.
-  + **You can Google the key (hint: XCYBK)!**
+  + **XCYBK-2B3KV-G8T8F-WXJM7-WCTYT**
   + Hashes:
     ```
     MD5             5BF476E2FC445B8D06B3C2A6091FE3AA
@@ -31,9 +31,7 @@ Because I am bored.
     ```
 
 ## Details/Discussion
-~~I used [^2] and [^3] as guides.~~
-
-**Found a better method. More to come**
+Added create-xp-install-vhd.ps1 script. See comments in script.
 
 ## Links/References
 [^1]: [System requirements for Hyper-V on Windows and Windows Server](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/host-hardware-requirements)
