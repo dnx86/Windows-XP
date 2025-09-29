@@ -43,6 +43,8 @@ $WinPEPath = "$PSScriptRoot\WinPE_amd64"
 $pathMount = "$WinPEPath\mount"
 $pathWimFile = "$WinPEPath\media\sources\boot.wim"
 $pathCU = "$PSScriptRoot\CUs"
+$pathXPUpdateFolder = "$PSScriptRoot\Post-SP3-Updates"
+$pathXPUpdateList = "$PSScriptRoot\post-sp3-updates-list.txt"
 
 
 # No point of continuing if the ISO is not present.
@@ -155,6 +157,31 @@ Copy-Item -Path "$pathISOi386" -Destination "$pathMount\I386" -Recurse -Force
 # Unmount the ISO.
  Write-Host "Unmounting the ISO image." -ForegroundColor DarkGreen
  Dismount-DiskImage -ImagePath $pathXPiso -ErrorAction Stop | Out-Null
+
+
+ # Apply Windows XP updates.
+ # Post-SP3-Updates folder with updates must be in the same location as this script.
+ # Same goes with post-sp3-updates-list.txt file. Patch KB name each on a separate line. 
+ # Used list from:
+ # https://archive.org/details/windows-xp-sp-3-patches-updated
+ # Downloaded patches straight from Microsoft. Some weren't present.
+ # Slipstream patches into Windows XP install files:
+ # https://support.microsoft.com/en-us/topic/how-to-integrate-software-updates-into-your-windows-installation-source-files-58beba8e-befa-91ae-63eb-d661e5910937
+ if ( (Test-Path -Path $pathXPUpdateFolder) -and (Test-Path -Path $pathXPUpdateList) ) {
+    Write-Host "Slipstreaming Windows XP updates..." -ForegroundColor DarkMagenta
+    $listContent = Get-Content -Path $pathXPUpdateList
+    foreach ($line in $listContent){
+        $theUpdate = (Get-ChildItem -Path "$pathXPUpdateFolder\*$line*").FullName
+        if ($null -ne $theUpdate) {
+            Write-Host "Adding update $line"
+            Start-Process "$theUpdate" -ArgumentList "/integrate:$pathMount /passive /norestart" -Wait -LoadUserProfile -NoNewWindow
+        }
+        else {
+            Write-Host "$line does not exists!" -ForegroundColor Yellow
+        }
+    }
+    Write-Host "Slipstreaming Windows XP updates...completed" -ForegroundColor DarkMagenta
+ }
 
 
 # Drivers MUST BE IN SUBFOLDERS UNDER $OEM$\$1\DRIVERS
@@ -310,7 +337,7 @@ OemSkipWelcome = 1
 TimeZone = 4
 
 [UserData]
-ProductKey="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+ProductKey="XCYBK-2B3KV-G8T8F-WXJM7-WCTYT"
 FullName = "Home"
 OrgName = "Home"
 ComputerName = *
