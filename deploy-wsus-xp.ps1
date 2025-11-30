@@ -1,4 +1,4 @@
-# Setup and configure WSUS for Windows XP and XP Embedded. 32-bit only.
+# Setup and configure WSUS for updating 32-bit Windows XP and XP Embedded computers.
 # Tested on Windows Server 2022. The script is assumed to run after a clean installation.
 # 1,747 updates using 4,955.52 MB of space.
 # For Windows Server 2025, see "Hardening changes for Windows Server Update Services in Windows Server 2025". Link below.
@@ -85,4 +85,5 @@ $rule.Enabled = $True
 $rule.Save()
 
 Write-Host "Applying rule..."
+
 $rule.ApplyRule()
