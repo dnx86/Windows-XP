@@ -411,7 +411,23 @@ $params = @{
 }
 Write-Host "$($params.modelName) $($params.modelNumber)" -ForegroundColor DarkYellow
 & "$PSScriptRoot\create-xp-install2.ps1" @params
-$theScriptComputers += "    `"$($computer.modelName) $($computer.modelNumber)`"" + ' ' + "{Write-Host `$theModel `" detected! Automatic Windows XP installation will begin...`"; X:\install-windows-xp-$($computer.modelName)-$($computer.modelNumber).bat; break }" + [Environment]::NewLine
+$theScriptComputers += "    `"$($params.modelName) $($params.modelNumber)`"" + ' ' + "{Write-Host `$theModel `" detected! Automatic Windows XP installation will begin...`"; X:\install-windows-xp-$($params.modelName)-$($params.modelNumber).bat; break }" + [Environment]::NewLine
+
+# Create Windows XP install scripts and files for HP Z420 Workstation.
+# Use .Replace(' ', '-') for modelNumbers with spaces in them.
+$params = @{
+    pathMount = $pathMount
+    pathShareXP = $pathShareXP
+    pathShareScripts = $pathShareScripts
+    modelName = "HP"
+    modelNumber = "Z420 Workstation"
+    pathDellDriverCab = $null
+    storageReleaseId = $null
+    pathDriversMisc = "$PSScriptRoot\Z420-Drivers"
+}
+Write-Host "$($params.modelName) $($params.modelNumber)" -ForegroundColor DarkYellow
+& "$PSScriptRoot\create-xp-install2.ps1" @params
+$theScriptComputers += "    `"$($params.modelName) $($params.modelNumber)`"" + ' ' + "{Write-Host `$theModel `" detected! Automatic Windows XP installation will begin...`"; X:\install-windows-xp-$($params.modelName)-$(($params.modelNumber).Replace(' ', '-')).bat; break }" + [Environment]::NewLine
 
 # Create a Powershell script to detect the model and run the appropriate script.
 # This script ties it all together.
@@ -460,6 +476,20 @@ if (Test-Path -Path "$PSScriptRoot\TXTSETUP.SIF") {
 # Unmount boot image and save changes
 Write-Host "Unmounting and saving changes to boot.wim..." -ForegroundColor DarkGreen
 Dismount-WindowsImage -Path $pathMount -Save -Verbose
+
+$timestamp = Get-Date $StartDateTime -Format "yyyy-MM-dd_HHmm"
+# Copy the boot.wim file to $PSScriptRoot
+Copy-Item -Path $pathWimFile -Destination "$PSScriptRoot\boot-$timestamp.wim"
+
+# Create windows-xp.zip in $PSScriptRoot to copy over to the network share.
+$params = @{
+    Path = $pathShareXP
+    DestinationPath = "$PSScriptRoot\windows-xp-$timestamp.zip"
+    CompressionLevel = "NoCompression"
+}
+Compress-Archive @params
+
+
 
 Write-Host "Script completed at $(Get-Date) and took $( (New-TimeSpan -Start $StartDateTime).Hours ) hours, $( (New-TimeSpan -Start $StartDateTime).Minutes ) minutes, $( (New-TimeSpan -Start $StartDateTime).Seconds ) seconds" -ForegroundColor Red
 
