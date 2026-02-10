@@ -43,7 +43,7 @@ Write-Host "Script started at $StartDateTime" -ForegroundColor Red
 
 
 # ModelName-ModelNumber
-$folderName = "$modelName-$modelNumber"
+$folderName = ("$modelName-$modelNumber").Replace(' ', '-')
 $pathMain = Join-Path -Path $pathShareXP -ChildPath $folderName
 if (Test-Path -Path $pathMain) {
     Write-Host "Deleting the existing $pathMain folder..." -ForegroundColor Yellow
