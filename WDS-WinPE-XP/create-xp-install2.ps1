@@ -278,7 +278,7 @@ InstallDefaultComponents = Yes
 [OEMBootFiles]
 $oemBootFiles
 
-; THIS IS SPECIFIC TO THE DELL OPTIPLEX 9010! MODIFY FOR DIFFERENT DELL SYSTEMS!
+; AHCI/RAID drivers go here to avoid error 0x0000007B!
 [MassStorageDrivers]
 $massStorageDrivers
 "@
