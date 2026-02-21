@@ -1,0 +1,1 @@
+REG ADD HKLM\SYSTEM\WPA\POSReady /v Installed /d 1 /t REG_DWORD /f
