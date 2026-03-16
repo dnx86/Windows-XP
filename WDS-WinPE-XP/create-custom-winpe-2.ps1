@@ -10,7 +10,7 @@ Write-Host "Script started at $StartDateTime" -ForegroundColor Red
 
 # List of cumulative updates in the CUs folder. KB names are in double quotes separated by commas.
 # DO NOT INCLUDE THE SSU HERE. It must be present in the CUs folder though.
-$listCUs = @("KB5074105")
+$listCUs = @("KB5077181")
 
 # Windows XP ISO filename
 $pathXPiso = "$PSScriptRoot\en_windows_xp_professional_with_service_pack_3_x86_cd_vl_x14-73974.iso"
